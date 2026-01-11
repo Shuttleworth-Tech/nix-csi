@@ -1,4 +1,4 @@
-# Builder environment for distributed builds
+# Proxy environment for distributed builds
 # Runs openssh for accepting build requests from CSI pods
 #
 # Uses lruLix (Lix with LRU patch) to keep ValidPaths.registrationTime updated
@@ -13,28 +13,16 @@ let
   dinixEval = import dinix {
     inherit pkgs;
     modules = [
-      ../modules/gc.nix
       ../modules/logger.nix
-      ../modules/nix-daemon.nix
       ../modules/setup.nix
       ../modules/ssh.nix
       ../modules/users.nix
       {
         config = {
-          gc = {
-            retainSeconds = 3600;
-            intervalSeconds = 3600;
-          };
-          env-file.variables = {
-            PYTHONUNBUFFERED = "1";
-            NIXPKGS_ALLOW_UNFREE = "1";
-          };
-          # Umbrella service for builder
-          services.builder = {
+          services.proxy = {
             type = "internal";
             depends-on = [
               "logger"
-              "gc"
               "openssh"
               "ssh-reloader"
             ];
@@ -44,26 +32,16 @@ let
     ];
   };
 
-  builderEnv = pkgs.buildEnv {
-    name = "builderEnv";
+  proxyEnv = pkgs.buildEnv {
+    name = "proxyEnv";
     paths = with pkgs; [
       # Required
       dinixEval.config.containerWrapper
       bash
       coreutils
-      gitMinimal # lix shells out to git
-      lruLix
       openssh
-      procps # pgrep
-      # Commonly used
-      attic-client
-      cachix
       # Not required
       fishMinimal
-      gnugrep
-      getent
-      iputils
-      curl
     ];
     # So we can peek into eval
     passthru.dinixEval = dinixEval;
@@ -91,9 +69,9 @@ let
   };
 in
 pkgs.buildEnv {
-  name = "builder-init-env";
+  name = "proxy-init-env";
   paths = [
-    builderEnv
+    proxyEnv
     initCopy
   ];
 }
