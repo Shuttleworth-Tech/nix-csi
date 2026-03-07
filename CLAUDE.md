@@ -14,8 +14,9 @@ nix-csi is a Kubernetes CSI (Container Storage Interface) driver that mounts `/n
 
 1. **Node DaemonSet** - Runs on each Kubernetes node, implements the CSI driver protocol to mount Nix stores into pods
 2. **Cache StatefulSet** - Central cache/coordinator that manages distributed builds and binary substitution
-3. **Python Services** - Three main services packaged together:
+3. **Python Services** - Two active services packaged together:
    - `nix-csi`: CSI driver implementation (gRPC server)
+   - `nix-cache`: Cache manager (watches builder pods, updates /etc/machines)
 
 ## Architecture
 
@@ -37,9 +38,9 @@ The project uses Nix with flake-compatish for backwards compatibility. Key build
 
 ### Communication Flow
 
-**Cache → Nodes**: The cache service watches for pods labeled `app=nix-csi-node` and updates `/etc/machines` with builder DNS names (`pod.name.nix-builders.namespace.svc.cluster.local`). This enables distributed builds.
+**Cache → Builders**: The cache service (`nix_cache/cli.py`) watches for pods labeled `nix.csi/builder` and updates `/etc/machines` with builder DNS names (`pod.name.nix-builders.namespace.svc.cluster.local`). This enables distributed builds from the cache pod.
 
-**Nodes → Cache**: Node pods use the cache as a binary substitute via `ssh-ng://nix@nix-cache?trusted=1` configured in `kubenix/config.nix`.
+**Nodes → Cache/Builders**: Node pods use the cache and builder pods as binary substitutes/remote builders via `ssh-ng://` URIs configured in `kubenix/config.nix`.
 
 **CSI Protocol**: When a pod requests a volume with `storePath` or `nixExpr` or `flakeRef` in volumeAttributes, the node CSI driver:
 1. Builds/fetches the requested Nix store path
@@ -122,10 +123,9 @@ Integration tests run automatically in CI via `.github/workflows/integration-tes
 
 ### Python Development
 
-The Python code is in `python/` with three packages:
+The Python code is in `python/` with two active packages:
 - `python/nix_csi/` - CSI driver (main entry: `service.py`)
 - `python/nix_cache/` - Cache manager (main entry: `cli.py`)
-- `python/nix_timegc/` - Garbage collector (main entry: `cli.py`)
 
 Version is managed in `python/pyproject.toml` and automatically imported into the Nix build.
 
@@ -146,15 +146,44 @@ Both environments use dinit for service management with dependency chains:
 
 The `config-reconciler` service runs continuously to sync SSH keys and Nix config from mounted volumes to runtime locations.
 
-## Important Files
+## Code Map
 
-- `default.nix`: Main entry point, defines all build outputs
-- `environments/cache/default.nix`: Cache environment with shared + cache services
-- `environments/node/default.nix`: Node environment with shared + CSI services
-- `kubenix/options.nix`: Kubernetes module options and package builds
-- `python/nix_csi/service.py`: CSI NodeServicer gRPC implementation
-- `python/nix_cache/cli.py`: Cache service that maintains Nix machines file
-- `liximage.nix`: Builds the Lix container used by initContainers
+**CSI Driver** (`python/nix_csi/`)
+- `service.py` — gRPC NodeServicer; entry point for all volume publish/unpublish operations
+- `volume.py` — volume lifecycle: build → hardlink → bind mount
+- `nix.py` — all `nix` subprocess calls (build, eval, closure, gcroots)
+- `cache.py` — rsync paths to cache pod; generates substituter args
+- `builders.py` — discovers builder pods in K8s; generates `ssh-ng://` URIs for distributed builds
+- `cleanup.py` — removes orphaned volume mounts not in active volume handles
+- `hardlinks.py` — copies store closures into per-volume directories via hardlinks
+- `events.py` / `errors.py` — K8s event reporting and CSI error → gRPC status mapping
+- `constants.py` — environment variables, paths, timeouts (single source of truth for tuning)
+
+**Cache Manager** (`python/nix_cache/`)
+- `cli.py` — watches builder pods (`nix.csi/builder` label), writes `/etc/machines` for distributed builds
+
+**Kubernetes Manifests** (`kubenix/`)
+- `options.nix` — all module options; builds environment packages for both architectures
+- `daemonset.nix` — node CSI pod spec
+- `cache.nix` — cache StatefulSet spec
+- `builder.nix` — builder Deployment specs (configurable replicas, multi-arch)
+- `config.nix` — generates `nix.conf` ConfigMaps per role
+- `secret.nix` — SSH keys, known_hosts, ssh_config ConfigMaps
+- `rbac.nix` — ClusterRole for pod/event/node access
+- `undeploy.nix` — cleanup DaemonSet that removes mounts on undeploy
+
+**Environments** (dinit service composition)
+- `environments/cache/default.nix` — cache pod: gc + ssh + nix-daemon
+- `environments/node/default.nix` — node pod: gc + ssh + nix-daemon + csi-daemon
+- `environments/builder/default.nix` — builder pod: SSH-accessible Nix build node
+- `environments/proxy/default.nix` — proxy pod: SSH relay only, no Nix daemon
+- `environments/modules/` — shared dinit service modules (setup, gc, ssh, users, nix-daemon, logger)
+
+**Build & Packaging**
+- `default.nix` — all build outputs (kubenixApply, lixImage, scratchImage, push scripts)
+- `pkgs/default.nix` — package overlay (nix-csi, lruLix, csi-proto-python, kr8s)
+- `liximage.nix` — Lix OCI image used by initContainers
+- `scratchimage.nix` — minimal scratch OCI image for test pods
 
 ## Code Review Standards
 
