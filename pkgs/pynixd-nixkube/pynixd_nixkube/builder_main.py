@@ -13,9 +13,9 @@ from .setup import configure_logging, install_nss
 log = structlog.get_logger(__name__)
 
 
-async def _main():
+async def _main() -> None:
     configure_logging()
-    log.info("pynixd_nixkube_starting")
+    log.info("pynixd_nixkube_builder_starting")
     install_nss()
 
     local_store = LocalSocketStore(
@@ -30,12 +30,11 @@ async def _main():
     server = Server(local_store=local_store, settings=settings)
 
     async with server:
-        await server.add_store(local_store)
-        log.info("pynixd_nixkube_running")
+        log.info("pynixd_nixkube_builder_running")
         await server.wait_finished()
 
 
-def main():
+def main() -> None:
     try:
         asyncio.run(_main())
     except KeyboardInterrupt:
