@@ -85,6 +85,7 @@ rec {
       {
         kluctl.discriminator = "nixkube-test";
         nixkube.enable = false;
+        nixkube.imagePullSecrets = [ "ghcr-pull" ];
       }
     ];
   };
