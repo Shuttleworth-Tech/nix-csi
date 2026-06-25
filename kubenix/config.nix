@@ -15,9 +15,11 @@ in
       nixConfig.settings = {
         allowed-users = [ "*" ];
         trusted-public-keys = [
+          "shuttleworth-nix-csi.cachix.org-1:w25DnBem2qh299BO4MFl4whzgW5Bt+IYhMogzh9j0Ho="
           "nix-csi.cachix.org-1:i4w33gR4efO67jpz8U7g/MdvRQ6mQ3LEF9fB8tES60g="
         ];
         substituters = [
+          "https://shuttleworth-nix-csi.cachix.org"
           "https://nix-csi.cachix.org"
         ];
         experimental-features = [

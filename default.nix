@@ -54,7 +54,7 @@ rec {
           kluctl.preDeployScript = # bash
             ''
               export PATH=${lib.makeBinPath [ pkgs.cachix ]}:$PATH
-              cachix push nix-csi ${config.internal.manifestJSONFile}
+              cachix push shuttleworth-nix-csi ${config.internal.manifestJSONFile}
             '';
           nixkube.pynixd.enable = false;
           # push = true retains Nix string context on DaemonSet store paths so
@@ -108,7 +108,7 @@ rec {
                       exit 1
                   fi
               fi
-              cachix push nix-csi ${config.internal.manifestJSONFile}
+              cachix push shuttleworth-nix-csi ${config.internal.manifestJSONFile}
             '';
           nixkube.pynixd.enable = true;
           nixkube.push = true;
@@ -166,7 +166,7 @@ rec {
         #! ${pkgs.runtimeShell}
         export PATH=${lib.makeBinPath [ pkgs.cachix ]}:$PATH
         # ${lib.concatStrings (lib.attrValues inputs)}
-        nix-store -qR --include-outputs $(nix-store -qd ${kubenixPush.deploymentScript}) | grep -v '\.drv$' | cachix push nix-csi
+        nix-store -qR --include-outputs $(nix-store -qd ${kubenixPush.deploymentScript}) | grep -v '\.drv$' | cachix push shuttleworth-nix-csi
       '';
 
   # Push kubenixCI2 (nocache variant) store paths to cachix.
@@ -179,7 +179,7 @@ rec {
         export PATH=${lib.makeBinPath [ pkgs.cachix ]}:$PATH
         set -euo pipefail
         DRV=$(nix-store -qd $(nix build --no-link --print-out-paths --file ${builtins.toString ./.} kubenixCI2.deploymentScript 2>/dev/null))
-        nix-store -qR --include-outputs "$DRV" 2>/dev/null | grep -v '\.drv$' | cachix push nix-csi
+        nix-store -qR --include-outputs "$DRV" 2>/dev/null | grep -v '\.drv$' | cachix push shuttleworth-nix-csi
       '';
 
   # Push environments for both x86_64-linux and aarch64-linux to cachix.
@@ -190,7 +190,7 @@ rec {
         #! ${pkgs.runtimeShell}
         export PATH=${lib.makeBinPath [ pkgs.cachix ]}:$PATH
         # ${lib.concatStrings (lib.attrValues inputs)}
-        nix-store -qR --include-outputs $(nix-store -qd ${kubenixPushBoth.deploymentScript}) | grep -v '\.drv$' | cachix push nix-csi
+        nix-store -qR --include-outputs $(nix-store -qd ${kubenixPushBoth.deploymentScript}) | grep -v '\.drv$' | cachix push shuttleworth-nix-csi
       '';
 
   uploadScratch =

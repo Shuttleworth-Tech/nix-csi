@@ -19,9 +19,9 @@ runs:
       uses: nixbuild/nix-quick-install-action@master
       with:
         nix_conf: |
-          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-csi.cachix.org-1:i4w33gR4efO67jpz8U7g/MdvRQ6mQ3LEF9fB8tES60g=
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= shuttleworth-nix-csi.cachix.org-1:w25DnBem2qh299BO4MFl4whzgW5Bt+IYhMogzh9j0Ho= nix-csi.cachix.org-1:i4w33gR4efO67jpz8U7g/MdvRQ6mQ3LEF9fB8tES60g=
           extra-platforms = aarch64-linux qemu-user
-          substituters = https://cache.nixos.org?priority=1 https://nix-csi.cachix.org?priority=2
+          substituters = https://cache.nixos.org?priority=1 https://shuttleworth-nix-csi.cachix.org?priority=2 https://nix-csi.cachix.org?priority=3
           keep-env-derivations = true
           keep-outputs = true
     - name: Restore and save Nix store

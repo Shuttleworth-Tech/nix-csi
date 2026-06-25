@@ -72,6 +72,16 @@ jobs:
           nix build --show-trace --file . scratchImage.push --out-link nix-scratches
           ./nix-scratches/bin/push
 
+      - name: Build and push environments to cachix
+        run: |
+          nix build --show-trace --file . push --out-link nix-envs
+          ./nix-envs/bin/push
+        if: env.CACHIX_AUTH_TOKEN != ''
+
+      - name: Build environments (no push)
+        run: |
+          nix build --show-trace --file . push --out-link nix-envs
+        if: env.CACHIX_AUTH_TOKEN == ''
 
   test-kind:
     needs: build
