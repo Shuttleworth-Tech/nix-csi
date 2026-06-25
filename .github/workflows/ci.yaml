@@ -93,24 +93,22 @@ jobs:
         run: |
           sudo rm --recursive --force /home/runner/.cache
 
-      - name: Deploy nix-csi
+      - name: Create GHCR pull secret
         run: |
-          # Pre-create namespace for kluctl (it may create it too, but this is safe)
           kubectl create namespace nixkube || true
-          nix build --show-trace --file . kubenixCI1.deploymentScript
-          ./result/bin/kubenixDeploy --yes
-
-      - name: Create GHCR pull secret and restart pods
-        run: |
-          # Create the secret AFTER kluctl deploy (kluctl prunes unmanaged resources)
           kubectl create secret docker-registry ghcr-pull \
             --namespace=nixkube \
             --docker-server=ghcr.io \
             --docker-username="$REPO_USERNAME" \
             --docker-password="$REPO_TOKEN" \
             --dry-run=client -o yaml | kubectl apply -f -
-          # Delete existing pods so they restart and pick up the secret
-          kubectl delete pods --all -n nixkube --wait=false
+          kubectl annotate secret ghcr-pull -n nixkube \
+            kluctl.io/skip-delete=true --overwrite
+
+      - name: Deploy nix-csi
+        run: |
+          nix build --show-trace --file . kubenixCI1.deploymentScript
+          ./result/bin/kubenixDeploy --yes
 
       - name: Wait for nix-csi node daemonset
         run: |
