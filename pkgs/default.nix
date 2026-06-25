@@ -70,12 +70,10 @@ self: pkgs: {
             rev = "35d7fe3813a3801d94362cbe1aebfdefc34e29cc"; # develop @ 2026-05-28
           }; # pinned to avoid floating asyncssh→cryptography version mismatch
       # pynixd's default.nix overrides asyncssh to fetch from ronf/asyncssh main
-      # (no rev pin), which pulls v2.23.1 requiring cryptography>=48.0.1.
-      # pynixd's default.nix overrides asyncssh to fetch from ronf/asyncssh main
       # (no rev pin), pulling v2.23.1 which requires cryptography>=48.0.1.
       # Our nixpkgs only has cryptography 46.0.4.
-      # Fix: patch the fetched pynixd source to add pythonRuntimeDepsCheck = false
-      # to its asyncssh override so the build doesn't fail on the version check.
+      # Fix: patch pynixd source to use nixpkgs asyncssh (2.22.0) directly
+      # instead of the floating GitHub override.
       patchedPath =
         if builtins.isPath path then
           path
@@ -83,9 +81,9 @@ self: pkgs: {
           pkgs.runCommand "pynixd-patched" { } ''
             cp -r ${path} $out
             chmod -R +w $out
-            substituteInPlace $out/default.nix \
-              --replace-fail 'doInstallCheck = false;' \
-                             'doInstallCheck = false; pythonRuntimeDepsCheck = false;'
+            # Remove the asyncssh overrideAttrs block (lines from opening paren
+            # through closing paren) and replace with plain asyncssh
+            ${pkgs.gnused}/bin/sed -i '/(python\.pkgs\.asyncssh\.overrideAttrs/,/})/c\      python.pkgs.asyncssh' $out/default.nix
           '';
     in
     (import patchedPath {
