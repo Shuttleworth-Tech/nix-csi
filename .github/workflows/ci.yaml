@@ -53,12 +53,17 @@ jobs:
           nix build --show-trace --file . nixImage.pushArch.x86_64-linux --out-link nix-nix
           ./nix-nix/bin/push-nix-x86_64-linux
 
-      - name: Tag nix image as latest
+      - name: Tag nix image as latest and version-only
         run: |
           # We only build amd64, so just tag it as latest directly
+          # Also create a version-only tag (without arch suffix) for kubenix manifests
+          NIX_VER=$(nix eval --raw --file . 'pkgs.nix.version')
+          APP_VER=$(python3 -c 'import tomllib; print(tomllib.load(open("pkgs/nixkube/pyproject.toml","rb"))["project"]["version"])')
+          SRC_TAG="${NIX_VER}-${APP_VER}-x86_64-linux"
           nix-shell -p regctl --run "
             regctl registry login -u=\"$REPO_USERNAME\" -p=\"$REPO_TOKEN\" ghcr.io
-            regctl image copy ghcr.io/shuttleworth-tech/nix-csi/nix:\$(nix eval --raw --file . 'pkgs.nix.version')-\$(python3 -c 'import tomllib; print(tomllib.load(open(\"pkgs/nixkube/pyproject.toml\",\"rb\"))[\"project\"][\"version\"])')-x86_64-linux ghcr.io/shuttleworth-tech/nix-csi/nix:latest
+            regctl image copy ghcr.io/shuttleworth-tech/nix-csi/nix:${SRC_TAG} ghcr.io/shuttleworth-tech/nix-csi/nix:latest
+            regctl image copy ghcr.io/shuttleworth-tech/nix-csi/nix:${SRC_TAG} ghcr.io/shuttleworth-tech/nix-csi/nix:${NIX_VER}-${APP_VER}
           " || echo "Tagging skipped (non-critical)"
 
       - name: Build and push scratch image
