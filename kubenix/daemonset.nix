@@ -74,7 +74,7 @@ in
                 initContainers = lib.mkNumberedList {
                   "1" = {
                     name = "initcopy";
-                    image = "ghcr.io/lillecarl/nix-csi/nix:${curPkgs.nix.version}-${cfg.version}";
+                    image = "ghcr.io/shuttleworth-tech/nix-csi/nix:${curPkgs.nix.version}-${cfg.version}";
                     imagePullPolicy = "Always";
                     securityContext.privileged = true; # chroot store
                     env = lib.mkNamedList {
@@ -98,7 +98,7 @@ in
                 };
                 containers = lib.mkNamedList {
                   nix-node = {
-                    image = "ghcr.io/lillecarl/nix-csi/scratch:1.0.1";
+                    image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
                     command = [
                       "tini"
                       "--"

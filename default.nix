@@ -196,8 +196,8 @@ rec {
   uploadScratch =
     let
       scratchVersion = "1.0.1";
-      scratchUrl = system: "ghcr.io/lillecarl/nix-csi/scratch:${scratchVersion}-${system}";
-      scratchManifest = "ghcr.io/lillecarl/nix-csi/scratch:${scratchVersion}";
+      scratchUrl = system: "ghcr.io/shuttleworth-tech/nix-csi/scratch:${scratchVersion}-${system}";
+      scratchManifest = "ghcr.io/shuttleworth-tech/nix-csi/scratch:${scratchVersion}";
     in
     pkgs.writeScriptBin "uploadScratch" # bash
       ''

@@ -19,7 +19,7 @@ let
 
   containers = lib.mkNamedList {
     hello = {
-      image = "ghcr.io/lillecarl/nix-csi/scratch:1.0.1";
+      image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
       command = [ "hello" ];
       volumeMounts = lib.mkNamedList {
         nixkube = {
@@ -61,7 +61,7 @@ in
         restartPolicy = "Never";
         containers = lib.mkNamedList {
           hello = {
-            image = "ghcr.io/lillecarl/nix-csi/scratch:1.0.1";
+            image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
             command = [ "hello-unfree" ];
             volumeMounts = lib.mkNamedList {
               nixkube = {
@@ -184,7 +184,7 @@ in
         restartPolicy = "Never";
         containers = lib.mkNamedList {
           hello = {
-            image = "ghcr.io/lillecarl/nix-csi/scratch:1.0.1";
+            image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
             command = [ "${pkgs.hello}/bin/hello" ];
           };
         };
@@ -201,7 +201,7 @@ in
           restartPolicy = "Never";
           containers = lib.mkNamedList {
             hello = {
-              image = "ghcr.io/lillecarl/nix-csi/scratch:1.0.1";
+              image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
               command = [ "${pkgs.hello}/bin/hello" ];
             };
           };

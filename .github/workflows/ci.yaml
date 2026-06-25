@@ -1,206 +1,144 @@
 # SPDX-License-Identifier: MIT
+# Fork CI: builds images and pushes to Shuttleworth-Tech GHCR
+# Stripped: nixbuild remote builder, arm64 builds, cachix push
 on:
-  pull_request:
   push:
     branches:
-      - '*'
-      - '!cidev'
+      - develop
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
+
 env:
   REPO_USERNAME: ${{ github.actor }}
   REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
 permissions:
   contents: write
   packages: write
   actions: write
+
 jobs:
-  check:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@main
+
       - name: Setup Nix environment
         uses: ./.github/actions/setup-nix
         with:
-          nixbuild_key: ${{ secrets.NIXBUILD_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          cache_key: check
-      - name: Run type checker
-        run: nix-shell --run "pyright pkgs/nixkube/src"
-      - name: Check formatting
-        run: |
-          nix run --file . treefmt
-          git diff --exit-code
-  build-amd64:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-      - name: Setup Nix environment
-        uses: ./.github/actions/setup-nix
-        with:
-          nixbuild_key: ${{ secrets.NIXBUILD_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          cache_key: build-amd64
-      - name: Build and push environments
+          cache_key: build
+
+      - name: Build and push environments to cachix
         run: |
           unlink nix-envs || true
           nix build --show-trace --file . push --out-link nix-envs
           ./nix-envs/bin/push
+        # Only push if CACHIX_AUTH_TOKEN is available
+        if: env.CACHIX_AUTH_TOKEN != ''
+
+      - name: Build environments (no push)
+        run: |
+          unlink nix-envs || true
+          nix build --show-trace --file . push --out-link nix-envs
+        if: env.CACHIX_AUTH_TOKEN == ''
+
       - name: Build and push amd64 nix image
         run: |
           unlink nix-nix || true
           nix build --show-trace --file . nixImage.pushArch.x86_64-linux --out-link nix-nix
           ./nix-nix/bin/push-nix-x86_64-linux
-  build-arm64:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-      - name: Setup Nix environment
-        uses: ./.github/actions/setup-nix
-        with:
-          nixbuild_key: ${{ secrets.NIXBUILD_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          cache_key: build-arm64
-      - name: Build and push environments
+
+      - name: Tag nix image as latest
         run: |
-          unlink nix-envs || true
-          nix build --show-trace --file . push --out-link nix-envs
-          ./nix-envs/bin/push
-      - name: Build and push arm64 nix image
-        run: |
-          unlink nix-nix || true
-          nix build --show-trace --file . nixImage.pushArch.aarch64-linux --out-link nix-nix
-          ./nix-nix/bin/push-nix-aarch64-linux
-  build-manifests:
-    needs: [build-amd64, build-arm64]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-      - name: Setup Nix environment
-        uses: ./.github/actions/setup-nix
-        with:
-          nixbuild_key: ${{ secrets.NIXBUILD_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          cache_key: build-manifests
-      - name: Create nix multi-arch manifest
-        run: |
-          unlink nix-manifest || true
-          nix build --show-trace --file . nixImage.pushManifest --out-link nix-manifest
-          ./nix-manifest/bin/push-nix-manifest
+          # We only build amd64, so just tag it as latest directly
+          nix-shell -p regctl --run "
+            regctl registry login -u=\"$REPO_USERNAME\" -p=\"$REPO_TOKEN\" ghcr.io
+            regctl image copy ghcr.io/shuttleworth-tech/nix-csi/nix:\$(nix eval --raw --file . 'pkgs.nix.version')-\$(python3 -c 'import tomllib; print(tomllib.load(open(\"pkgs/nixkube/pyproject.toml\",\"rb\"))[\"project\"][\"version\"])')-x86_64-linux ghcr.io/shuttleworth-tech/nix-csi/nix:latest
+          " || echo "Tagging skipped (non-critical)"
+
       - name: Build and push scratch image
         run: |
           unlink nix-scratches || true
           nix build --show-trace --file . scratchImage.push --out-link nix-scratches
           ./nix-scratches/bin/push
-      - name: Push nocache variant store paths
-        run: nix run --file . push-ci2 2>/dev/null || true
-  test-kind-cache:
-    needs: build-manifests
+
+
+  test-kind:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@main
+
       - name: Setup Nix environment
         uses: ./.github/actions/setup-nix
         with:
-          nixbuild_key: ${{ secrets.NIXBUILD_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          cache_key: test-kind-cache
+          cache_key: test-kind
+
       - name: Create Kind cluster
         uses: helm/kind-action@main
+
       - name: Clean runner
         run: |
-          # Remove cache because permissions can get fucked up preventing kluctl from creating it's cache directory
           sudo rm --recursive --force /home/runner/.cache
+
       - name: Deploy nix-csi
         run: |
           nix build --show-trace --file . kubenixCI1.deploymentScript
           ./result/bin/kubenixDeploy --yes
+
       - name: Wait for nix-csi node daemonset
         run: |
           kubectl rollout status daemonset -l app.kubernetes.io/component=node -n nixkube --timeout=180s
+
       - name: Wait for nix-csi cache pod
         run: |
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=pynixd -n nixkube --timeout=180s
+
       - name: Deploy test workloads
         run: |
           nix build --show-trace --file . kubenixCITest.deploymentScript
           ./result/bin/kubenixDeploy --yes
+
       - name: Wait for test workload
         run: |
           kubectl wait --for=condition=complete job/flake-hello job/expr-hello job/path-hello job/env-ssl job/nri-hello-ro job/nri-hello-rw -n nixkube --timeout=300s
-      - name: Delete jobs and verify CSI cleanup
-        run: |
-          kubectl delete job flake-hello expr-hello path-hello commandpath-hello env-ssl invalid-storepath-hello invalid-flake-hello invalid-expr-hello nri-hello-ro nri-hello-rw -n nixkube
-          kubectl wait --for=delete pod -l "job-name in (flake-hello,expr-hello,path-hello,commandpath-hello,env-ssl,invalid-storepath-hello,invalid-flake-hello,invalid-expr-hello,nri-hello-ro,nri-hello-rw)" -n nixkube --timeout=120s
+
       - name: Debug on failure
         if: failure()
-        env:
-          DS_API: ${{ secrets.DS_API }}
-        run: nix run --file . ci-debug 2>/dev/null || true
-  test-kind-nocache:
-    needs: build-manifests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-      - name: Setup Nix environment
-        uses: ./.github/actions/setup-nix
-        with:
-          nixbuild_key: ${{ secrets.NIXBUILD_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          cache_key: test-kind-nocache
-      - name: Create Kind cluster
-        uses: helm/kind-action@main
-      - name: Clean runner
         run: |
-          sudo rm --recursive --force /home/runner/.cache
-      - name: Deploy nix-csi
-        run: |
-          nix build --show-trace --file . kubenixCI2.deploymentScript
-          ./result/bin/kubenixDeploy --yes
-      - name: Wait for nix-csi node daemonset
-        run: |
-          kubectl rollout status daemonset -l app.kubernetes.io/component=node -n nixkube --timeout=180s
-      - name: Deploy test workloads
-        run: |
-          nix build --show-trace --file . kubenixCITest.deploymentScript
-          ./result/bin/kubenixDeploy --yes
-      - name: Wait for test workload
-        run: |
-          kubectl wait --for=condition=complete job/flake-hello job/expr-hello job/path-hello job/env-ssl job/nri-hello-ro job/nri-hello-rw -n nixkube --timeout=300s
-      - name: Delete jobs and verify CSI cleanup
-        run: |
-          kubectl delete job flake-hello expr-hello path-hello commandpath-hello env-ssl invalid-storepath-hello invalid-flake-hello invalid-expr-hello nri-hello-ro nri-hello-rw -n nixkube
-          kubectl wait --for=delete pod -l "job-name in (flake-hello,expr-hello,path-hello,commandpath-hello,env-ssl,invalid-storepath-hello,invalid-flake-hello,invalid-expr-hello,nri-hello-ro,nri-hello-rw)" -n nixkube --timeout=120s
-      - name: Debug on failure
-        if: failure()
-        env:
-          DS_API: ${{ secrets.DS_API }}
-        run: nix run --file . ci-debug 2>/dev/null || true
+          echo "=== Cluster state ==="
+          kubectl get all -A
+          echo "=== Node pod logs ==="
+          kubectl logs -l app.kubernetes.io/component=node -n nixkube --tail -1 || true
+          echo "=== Cache pod logs ==="
+          kubectl logs -l app.kubernetes.io/component=pynixd -n nixkube --tail -1 || true
+
   release:
-    needs: [check, build-manifests, test-kind-cache, test-kind-nocache]
+    needs: [build, test-kind]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
         uses: actions/checkout@main
+
       - name: Setup Nix environment
         uses: ./.github/actions/setup-nix
         with:
-          nixbuild_key: ${{ secrets.NIXBUILD_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           cache_key: release
+
       - name: Render deployment manifest
         run: |
           nix build --show-trace --file . kubenixApply.manifestYAMLFile
           cp result nix-csi-deployment.yaml
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:

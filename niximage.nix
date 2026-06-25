@@ -8,7 +8,7 @@
 }:
 rec {
   server = "ghcr.io";
-  repo = "${server}/lillecarl/nix-csi";
+  repo = "${server}/shuttleworth-tech/nix-csi";
 
   images = lib.genAttrs [ "aarch64-linux" "x86_64-linux" ] (
     system:
@@ -126,7 +126,9 @@ rec {
         ''
           skopeo login -u="$REPO_USERNAME" -p="$REPO_TOKEN" ${server}
           ${image} | gzip --fast | skopeo copy docker-archive:/dev/stdin docker://${imageRef system}
-          cachix push nix-csi ${image}
+          if [ -n "''${CACHIX_AUTH_TOKEN:-}" ]; then
+            cachix push nix-csi ${image}
+          fi
         '';
     }
   ) images;

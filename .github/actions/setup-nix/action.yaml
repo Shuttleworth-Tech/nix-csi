@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: MIT
 name: "Setup Nix & Caches"
-description: "Installs Nix, configures Nixbuild SSH, and sets up substituters"
+description: "Installs Nix, configures caches and optional Nixbuild SSH"
 inputs:
   nixbuild_key:
-    description: "Private SSH key for Nixbuild"
-    required: true
+    description: "Private SSH key for Nixbuild (optional)"
+    required: false
+    default: ""
   github_token:
     description: "GitHub Token for API access"
     required: true
@@ -17,15 +18,10 @@ runs:
     - name: Install Nix
       uses: nixbuild/nix-quick-install-action@master
       with:
-        # TODO: When ready to migrate from nix-csi to nixkube module naming:
-        # - Update trusted-public-keys: nix-csi.cachix.org-1 → nixkube.cachix.org-1
-        # - Update substituters: https://nix-csi.cachix.org → https://nixkube.cachix.org
-        # - Recreate/migrate Cachix cache from nix-csi to nixkube
         nix_conf: |
-          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nixbuild.net/CHEAKK-1:IvfuR1Ldmkef8pMcSuCl9N2jppEb8KpBzdoB8uKQdxE= nix-csi.cachix.org-1:i4w33gR4efO67jpz8U7g/MdvRQ6mQ3LEF9fB8tES60g=
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-csi.cachix.org-1:i4w33gR4efO67jpz8U7g/MdvRQ6mQ3LEF9fB8tES60g=
           extra-platforms = aarch64-linux qemu-user
-          # builders = ssh-ng://eu.nixbuild.net aarch64-linux ; ssh-ng://eu.nixbuild.net x86_64-linux
-          substituters = https://cache.nixos.org?priority=1 https://nix-csi.cachix.org?priority=2 ssh-ng://eu.nixbuild.net?priority=4
+          substituters = https://cache.nixos.org?priority=1 https://nix-csi.cachix.org?priority=2
           keep-env-derivations = true
           keep-outputs = true
     - name: Restore and save Nix store
@@ -40,6 +36,7 @@ runs:
         purge-last-accessed: 0
         purge-primary-key: never
     - name: Configure SSH Keys
+      if: inputs.nixbuild_key != ''
       shell: bash
       run: |
         echo "${{ inputs.nixbuild_key }}" | install -D -m 600 /dev/stdin ~/.ssh/nixbuild_key

@@ -12,7 +12,7 @@ let
   nsRes = config.kubernetes.resources.${cfg.namespace};
 
   # Shared across pynixd central and builders
-  image = "ghcr.io/lillecarl/nix-csi/scratch:1.0.1";
+  image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
   storeVolumeAttributes = lib.mapAttrs (_: pkgs: pkgs.nixkube-pynixd-env) csiPkgs;
 
   pynixdLabels = cfg.labels // {

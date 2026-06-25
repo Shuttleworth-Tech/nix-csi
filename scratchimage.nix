@@ -24,7 +24,7 @@ let
 
   push =
     let
-      registry = "ghcr.io/lillecarl/nix-csi/scratch";
+      registry = "ghcr.io/shuttleworth-tech/nix-csi/scratch";
       x86Tag = "${registry}:${builtins.baseNameOf x86Image}";
       armTag = "${registry}:${builtins.baseNameOf armImage}";
     in
