@@ -60,11 +60,11 @@ jobs:
           NIX_VER=$(nix eval --raw --file . 'pkgs.nix.version')
           APP_VER=$(python3 -c 'import tomllib; print(tomllib.load(open("pkgs/nixkube/pyproject.toml","rb"))["project"]["version"])')
           SRC_TAG="${NIX_VER}-${APP_VER}-x86_64-linux"
-          nix-shell -p regctl --run "
+          nix shell nixpkgs#regctl -c bash -c "
             regctl registry login -u=\"$REPO_USERNAME\" -p=\"$REPO_TOKEN\" ghcr.io
             regctl image copy ghcr.io/shuttleworth-tech/nix-csi/nix:${SRC_TAG} ghcr.io/shuttleworth-tech/nix-csi/nix:latest
             regctl image copy ghcr.io/shuttleworth-tech/nix-csi/nix:${SRC_TAG} ghcr.io/shuttleworth-tech/nix-csi/nix:${NIX_VER}-${APP_VER}
-          " || echo "Tagging skipped (non-critical)"
+          "
 
       - name: Build and push scratch image
         run: |
