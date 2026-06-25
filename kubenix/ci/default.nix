@@ -10,6 +10,9 @@ let
 in
 {
   config = {
+    # GHCR packages are private (org policy), so CI creates a ghcr-pull
+    # docker-registry secret before deploying.
+    nixkube.imagePullSecrets = [ "ghcr-pull" ];
     nixkube.loggingConfig = {
       renderer = "json";
       loggers = {

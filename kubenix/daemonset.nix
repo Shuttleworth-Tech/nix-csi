@@ -64,6 +64,7 @@ in
               spec = {
                 serviceAccountName = "nixkube";
                 priorityClassName = "system-node-critical";
+                imagePullSecrets = map (name: { inherit name; }) cfg.imagePullSecrets;
                 tolerations = [
                   {
                     key = "node-role.kubernetes.io/control-plane";

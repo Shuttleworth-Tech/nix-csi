@@ -187,6 +187,7 @@ in
             spec = {
               serviceAccountName = "nixkube";
               priorityClassName = "system-cluster-critical";
+              imagePullSecrets = map (name: { inherit name; }) cfg.imagePullSecrets;
 
               containers = lib.mkNamedList {
                 pynixd = {
@@ -338,6 +339,7 @@ in
           metadata.labels = builderLabels;
           spec = {
             serviceAccountName = "nixkube";
+            imagePullSecrets = map (name: { inherit name; }) cfg.imagePullSecrets;
             restartPolicy = "Never";
             affinity = {
               podAntiAffinity = {

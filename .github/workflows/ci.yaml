@@ -106,19 +106,7 @@ jobs:
         run: |
           nix build --show-trace --file . kubenixCI1.deploymentScript
           ./result/bin/kubenixDeploy --yes
-          # Patch all pods/daemonsets to use the pull secret
-          kubectl patch daemonset nix-node -n nixkube \
-            -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-pull"}]}}}}' || true
-          kubectl patch statefulset pynixd -n nixkube \
-            -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-pull"}]}}}}' || true
-          # Restart pods to pick up the secret
-          kubectl rollout restart daemonset/nix-node -n nixkube || true
-          kubectl rollout restart statefulset/pynixd -n nixkube || true
-          # Patch any init jobs too
-          for job in $(kubectl get jobs -n nixkube -o name 2>/dev/null); do
-            kubectl patch "$job" -n nixkube \
-              -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-pull"}]}}}}' 2>/dev/null || true
-          done
+
       - name: Wait for nix-csi node daemonset
         run: |
           kubectl rollout status daemonset -l app.kubernetes.io/component=node -n nixkube --timeout=180s

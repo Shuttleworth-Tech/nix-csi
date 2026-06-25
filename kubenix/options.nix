@@ -99,6 +99,12 @@ in
       type = lib.types.path;
       default = "/var/lib/nix-csi";
     };
+    imagePullSecrets = lib.mkOption {
+      description = "List of image pull secret names for private container registries (e.g. GHCR).";
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      example = [ "ghcr-pull" ];
+    };
 
     verifyStorePaths = lib.mkOption {
       description = "Verify Nix store paths after building or fetching, before mounting into pods.";

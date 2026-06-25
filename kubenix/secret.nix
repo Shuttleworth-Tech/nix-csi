@@ -89,6 +89,7 @@ in
               spec = {
                 restartPolicy = "OnFailure";
                 serviceAccountName = "nixkube";
+                imagePullSecrets = map (name: { inherit name; }) cfg.imagePullSecrets;
                 containers = lib.mkNamedList {
                   init = {
                     image = "ghcr.io/shuttleworth-tech/nix-csi/nix:${curPkgs.nix.version}-${cfg.version}";
