@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: MIT
 
 {
+  config,
   pkgs,
   lib,
   inputs,
   ...
 }:
 let
+  cfg = config.nixkube;
   system = pkgs.stdenv.hostPlatform.system;
   namespace = "nixkube";
+  imagePullSecrets = map (name: { inherit name; }) cfg.imagePullSecrets;
   labels = {
     "app.kubernetes.io/managed-by" = "nix";
     "app.kubernetes.io/name" = "nixkube";
@@ -43,7 +46,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
-        inherit containers;
+        inherit containers imagePullSecrets;
         volumes = lib.mkNamedList {
           nixkube.csi = {
             driver = "nixkube";
@@ -59,6 +62,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
+        inherit imagePullSecrets;
         containers = lib.mkNamedList {
           hello = {
             image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
@@ -99,7 +103,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
-        inherit containers;
+        inherit containers imagePullSecrets;
         volumes = lib.mkNamedList {
           nixkube.csi = {
             driver = "nixkube";
@@ -116,6 +120,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
+        inherit imagePullSecrets;
         containers = lib.recursiveUpdate containers {
           hello.command = [ (lib.getExe pkgs.hello) ];
         };
@@ -134,6 +139,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
+        inherit imagePullSecrets;
         containers = lib.recursiveUpdate containers {
           hello = {
             command = [
@@ -182,6 +188,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
+        inherit imagePullSecrets;
         containers = lib.mkNamedList {
           hello = {
             image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
@@ -199,6 +206,7 @@ in
         metadata.annotations."nixkube/pod-rw" = "true";
         spec = {
           restartPolicy = "Never";
+          inherit imagePullSecrets;
           containers = lib.mkNamedList {
             hello = {
               image = "ghcr.io/shuttleworth-tech/nix-csi/scratch:1.0.1";
@@ -216,7 +224,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
-        inherit containers;
+        inherit containers imagePullSecrets;
         volumes = lib.mkNamedList {
           nixkube.csi = {
             driver = "nixkube";
@@ -233,7 +241,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
-        inherit containers;
+        inherit containers imagePullSecrets;
         volumes = lib.mkNamedList {
           nixkube.csi = {
             driver = "nixkube";
@@ -249,7 +257,7 @@ in
       };
       spec.template.spec = {
         restartPolicy = "Never";
-        inherit containers;
+        inherit containers imagePullSecrets;
         volumes = lib.mkNamedList {
           nixkube.csi = {
             driver = "nixkube";
