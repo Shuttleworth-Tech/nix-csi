@@ -67,11 +67,26 @@ self: pkgs: {
             type = "github";
             owner = "lillecarl";
             repo = "pynixd";
-            ref = "develop";
-          }; # this must be updated to a "flake" locked input
+            rev = "35d7fe3813a3801d94362cbe1aebfdefc34e29cc"; # develop @ 2026-05-28
+          }; # pinned to avoid floating asyncssh→cryptography version mismatch
+      # pynixd's default.nix overrides asyncssh to fetch from ronf/asyncssh main
+      # (no rev pin), which pulls v2.23.1 requiring cryptography>=48.0.1.
+      # Our nixpkgs only has cryptography 46.0.4, so we pass patched pkgs where
+      # asyncssh skips the runtime deps check that enforces the version constraint.
+      pynixdPkgs = pkgs.extend (final: prev: {
+        python3 = prev.python3.override {
+          packageOverrides = pyFinal: pyPrev: {
+            asyncssh = pyPrev.asyncssh.overrideAttrs (old: {
+              pythonRuntimeDepsCheck = false;
+              doCheck = false;
+              doInstallCheck = false;
+            });
+          };
+        };
+      });
     in
     (import path {
-      inherit pkgs;
+      pkgs = pynixdPkgs;
     }).library;
   pynixd-nixkube = pkgs.python3Packages.callPackage ./pynixd-nixkube {
     inherit (self) pynixd kr8s;
