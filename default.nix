@@ -109,7 +109,6 @@ rec {
                       exit 1
                   fi
               fi
-              cachix push shuttleworth-nix-csi ${config.internal.manifestJSONFile}
             '';
           nixkube.pynixd.enable = true;
           nixkube.push = true;

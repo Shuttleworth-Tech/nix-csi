@@ -83,6 +83,17 @@ jobs:
           nix build --show-trace --file . push --out-link nix-envs
         if: env.CACHIX_AUTH_TOKEN == ''
 
+      - name: Render production manifest
+        run: |
+          nix build --show-trace --file . kubenixLocal.manifestYAMLFile --out-link nix-manifest
+          cp nix-manifest nix-csi-local.yaml
+
+      - name: Upload production manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: nix-csi-local-manifest
+          path: nix-csi-local.yaml
+
   test-kind:
     needs: build
     runs-on: ubuntu-latest
