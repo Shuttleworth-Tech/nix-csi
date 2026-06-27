@@ -72,23 +72,20 @@ self: pkgs: {
       # pynixd's default.nix overrides asyncssh to fetch from ronf/asyncssh main
       # (no rev pin), pulling v2.23.1 which requires cryptography>=48.0.1.
       # Our nixpkgs only has cryptography 46.0.4.
-      # Fix: patch pynixd source to use nixpkgs asyncssh (2.22.0) directly
-      # instead of the floating GitHub override.
-      patchedPath =
-        if builtins.isPath path then
-          path
-        else
-          pkgs.runCommand "pynixd-patched" { } ''
-            cp -r ${path} $out
-            chmod -R +w $out
-            # Remove the asyncssh overrideAttrs block (lines from opening paren
-            # through closing paren) and replace with plain asyncssh
-            ${pkgs.gnused}/bin/sed -i '/(python\.pkgs\.asyncssh\.overrideAttrs/,/})/c\      python.pkgs.asyncssh' $out/default.nix
-          '';
+      # Fix: import pynixd directly and override the asyncssh dependency at the
+      # Python package level, avoiding the IFD runCommand+sed that required
+      # building gnused for the target Linux system.
+      raw = (import path { inherit pkgs; }).library;
     in
-    (import patchedPath {
-      inherit pkgs;
-    }).library;
+    raw.overridePythonAttrs (old: {
+      dependencies = map (
+        dep:
+        if dep ? pname && dep.pname == "asyncssh" then
+          pkgs.python3Packages.asyncssh
+        else
+          dep
+      ) old.dependencies;
+    });
   pynixd-nixkube = pkgs.python3Packages.callPackage ./pynixd-nixkube {
     inherit (self) pynixd kr8s;
     inherit (pkgs) dockerTools;

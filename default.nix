@@ -113,6 +113,10 @@ rec {
             '';
           nixkube.pynixd.enable = true;
           nixkube.push = true;
+          nixkube.systems = {
+            x86_64-linux = true;
+            aarch64-linux = false;
+          };
         }
       )
     ];
