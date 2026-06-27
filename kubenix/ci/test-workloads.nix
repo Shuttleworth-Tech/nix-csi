@@ -50,7 +50,7 @@ in
         volumes = lib.mkNamedList {
           nixkube.csi = {
             driver = "nixkube";
-            volumeAttributes.flakeRef = "github:nixos/nixpkgs/nixos-unstable#hello";
+            volumeAttributes.flakeRef = "github:nixos/nixpkgs/9dcb002ca1690658be4a04645215baea8b95f31d#hello";
           };
         };
       };
@@ -86,7 +86,7 @@ in
                     type = "github";
                     owner = "nixos";
                     repo = "nixpkgs";
-                    ref = "nixos-unstable";
+                    rev = "9dcb002ca1690658be4a04645215baea8b95f31d";
                   };
                   pkgs = import nixpkgs { config = { allowUnfree = true; }; };
                 in
@@ -186,6 +186,7 @@ in
       metadata.labels = labels // {
         "app.kubernetes.io/component" = "ci-test-nri";
       };
+      spec.backoffLimit = 3;
       spec.template.spec = {
         restartPolicy = "Never";
         inherit imagePullSecrets;
@@ -202,6 +203,7 @@ in
       metadata.labels = labels // {
         "app.kubernetes.io/component" = "ci-test-nri";
       };
+      spec.backoffLimit = 3;
       spec.template = {
         metadata.annotations."nixkube/pod-rw" = "true";
         spec = {

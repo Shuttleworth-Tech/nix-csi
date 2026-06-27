@@ -21,14 +21,11 @@ in
       };
       root.level = "INFO";
     };
-    # Shared substituters for all CI variants (Kind and NixOS test VM).
-    # NixOS test VM has nix-serve at 10.113.37.1:5000 (PTP CNI gateway).
-    # Nix handles dead/unreachable substituters gracefully so this is safe on Kind.
+    # Substituters for CI (Kind cluster and NixOS test VM share this config).
     nixkube.node.nixConfig.settings.substituters = [
       "https://shuttleworth-nix-csi.cachix.org"
       "https://nix-csi.cachix.org"
       "https://cache.nixos.org"
-      "http://10.113.37.1:5000?trusted=1"
     ];
   };
 }

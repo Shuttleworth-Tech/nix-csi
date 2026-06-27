@@ -97,7 +97,7 @@ jobs:
           cache_key: test-kind
 
       - name: Create Kind cluster
-        uses: helm/kind-action@main
+        uses: helm/kind-action@v1.14.0
 
       - name: Clean runner
         run: |
@@ -133,9 +133,28 @@ jobs:
           nix build --show-trace --file . kubenixCITest.deploymentScript
           ./result/bin/kubenixDeploy --yes
 
-      - name: Wait for test workload
+      - name: Wait for NRI plugin registration
         run: |
-          kubectl wait --for=condition=complete job/flake-hello job/expr-hello job/path-hello job/env-ssl job/nri-hello-ro job/nri-hello-rw -n nixkube --timeout=300s
+          echo "Waiting 15s for NRI plugin to register with containerd..."
+          sleep 15
+
+      - name: Wait for fast test workloads
+        run: |
+          kubectl wait --for=condition=complete \
+            job/flake-hello job/path-hello job/commandpath-hello job/env-ssl \
+            -n nixkube --timeout=300s
+
+      - name: Wait for slow test workloads
+        run: |
+          kubectl wait --for=condition=complete \
+            job/expr-hello \
+            -n nixkube --timeout=600s
+
+      - name: Wait for NRI test workloads
+        run: |
+          kubectl wait --for=condition=complete \
+            job/nri-hello-ro job/nri-hello-rw \
+            -n nixkube --timeout=300s
 
       - name: Debug on failure
         if: failure()
