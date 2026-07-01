@@ -22,9 +22,9 @@ jobs:
           nix_conf: |
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nixbuild.net/CHEAKK-1:IvfuR1Ldmkef8pMcSuCl9N2jppEb8KpBzdoB8uKQdxE= nix-csi.cachix.org-1:i4w33gR4efO67jpz8U7g/MdvRQ6mQ3LEF9fB8tES60g=
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nixbuild.net/CHEAKK-1:IvfuR1Ldmkef8pMcSuCl9N2jppEb8KpBzdoB8uKQdxE= shuttleworth-nix-csi.cachix.org-1:w25DnBem2qh299BO4MFl4whzgW5Bt+IYhMogzh9j0Ho=
             # builders = ssh-ng://eu.nixbuild.net aarch64-linux ; ssh-ng://eu.nixbuild.net x86_64-linux
-            substituters = https://cache.nixos.org?priority=1 https://nix-csi.cachix.org?priority=2 ssh-ng://eu.nixbuild.net?priority=4
+            substituters = https://cache.nixos.org?priority=1 https://shuttleworth-nix-csi.cachix.org?priority=2 ssh-ng://eu.nixbuild.net?priority=4
             sandbox = relaxed
       - name: Configure SSH Keys
         shell: bash

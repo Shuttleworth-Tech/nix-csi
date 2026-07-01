@@ -24,7 +24,6 @@ in
     # Substituters for CI (Kind cluster and NixOS test VM share this config).
     nixkube.node.nixConfig.settings.substituters = [
       "https://shuttleworth-nix-csi.cachix.org"
-      "https://nix-csi.cachix.org"
       "https://cache.nixos.org"
     ];
   };

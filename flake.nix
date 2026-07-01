@@ -8,15 +8,18 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-compatish = {
-      url = "github:lillecarl/flake-compatish";
+      # pinned; mirror at Shuttleworth-Tech/flake-compatish
+      url = "github:lillecarl/flake-compatish/d8c944d4df613d47a3dc7b800c7531c33323c845";
       flake = false;
     };
     easykubenix = {
-      url = "github:lillecarl/easykubenix";
+      # pinned; mirror at Shuttleworth-Tech/easykubenix
+      url = "github:lillecarl/easykubenix/88a025fc04889f25b702f79030c6220c3ec48f9b";
       flake = false;
     };
     dinix = {
-      url = "github:lillecarl/dinix";
+      # pinned; mirror at Shuttleworth-Tech/dinix
+      url = "github:lillecarl/dinix/383d944448f629813a691707b8b45ba78f4d2f6b";
       flake = false;
     };
   };

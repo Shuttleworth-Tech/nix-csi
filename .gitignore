@@ -41,3 +41,4 @@ env.bak/
 venv.bak/
 .pytype/
 *.pyi
+deploy-artifact/

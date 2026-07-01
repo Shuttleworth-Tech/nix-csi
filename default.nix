@@ -197,34 +197,6 @@ rec {
         nix-store -qR --include-outputs $(nix-store -qd ${kubenixPushBoth.deploymentScript}) | grep -v '\.drv$' | cachix push shuttleworth-nix-csi
       '';
 
-  uploadScratch =
-    let
-      scratchVersion = "1.0.1";
-      scratchUrl = system: "ghcr.io/shuttleworth-tech/nix-csi/scratch:${scratchVersion}-${system}";
-      scratchManifest = "ghcr.io/shuttleworth-tech/nix-csi/scratch:${scratchVersion}";
-    in
-    pkgs.writeScriptBin "uploadScratch" # bash
-      ''
-        #! ${pkgs.runtimeShell}
-        set -euo pipefail
-        set -x
-        export PATH=${lib.makeBinPath [ pkgs.buildah ]}:$PATH
-        # Build and publish scratch image(s)
-        buildah login -u="$REPO_USERNAME" -p="$REPO_TOKEN" ghcr.io
-        container=$(buildah from --platform linux/amd64 scratch)
-        buildah config --env "PATH=/nix/var/result/bin" $container
-        buildah commit $container ${scratchUrl "x86_64-linux"}
-        buildah push ${scratchUrl "x86_64-linux"}
-        container=$(buildah from --platform linux/arm64 scratch)
-        buildah config --env "PATH=/nix/var/result/bin" $container
-        buildah commit $container ${scratchUrl "aarch64-linux"}
-        buildah push ${scratchUrl "aarch64-linux"}
-        buildah manifest rm ${scratchManifest} &>/dev/null || true
-        buildah manifest create ${scratchManifest}
-        buildah manifest add ${scratchManifest} ${scratchUrl "x86_64-linux"}
-        buildah manifest add ${scratchManifest} ${scratchUrl "aarch64-linux"}
-        buildah manifest push ${scratchManifest}
-      '';
   genModDoc =
     let
       optionsDocs = pkgs.nixosOptionsDoc {
